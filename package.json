@@ -1,0 +1,29 @@
+{
+  "name": "super-simple-call-blocker",
+  "version": "0.0.1",
+  "description": "An easy-to-use call blocker for SIP phones",
+  "author": "José M. Moreno <josemmo@protonmail.com>",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "build": "node build.js"
+  },
+  "keywords": [
+    "sip",
+    "call",
+    "blocker",
+    "spam"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/josemmo/super-simple-call-blocker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/josemmo/super-simple-call-blocker/issues"
+  },
+  "homepage": "https://github.com/josemmo/super-simple-call-blocker",
+  "devDependencies": {
+    "nexe": "^2.0.0-rc.22"
+  }
+}
