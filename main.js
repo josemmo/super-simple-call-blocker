@@ -18,6 +18,7 @@ console.log(
 // Read arguments
 let config = null;
 let localBlocklistPath = null;
+let logPath = null;
 process.argv.forEach((val, i) => {
   if (i == 0) return;
   if ((val == '--blocklist') || (val == '-b')) {
@@ -30,6 +31,8 @@ process.argv.forEach((val, i) => {
       data = process.argv[i+1];
     }
     config = JSON.parse(data);
+  } else if ((val == '--log') || (val == '-l')) {
+    logPath = process.argv[i+1];
   } else if ((val == '--help') || (val == '-h')) {
     console.log(
       '--help or -h: show this screen\n' +
@@ -50,7 +53,8 @@ process.argv.forEach((val, i) => {
       '    "realm": "telefonica.net",\n' +
       '    "user": "911223344",\n' +
       '    "password": "911223344"\n' +
-      '  }'
+      '  }\n\n' +
+      '--log [filepath] or -l [filepath]: set log file for incoming calls\n\n'
     );
     process.exit(0);
   }
@@ -58,6 +62,13 @@ process.argv.forEach((val, i) => {
 if (config === null) {
   console.error('Missing configuration. Run --help for more information.');
   process.exit(0);
+}
+
+// Define functions
+function log(msg) {
+  if (logPath === null) return;
+  let date = (new Date()).toJSON();
+  require('fs').appendFileSync(logPath, date + '\t' + msg + '\n');
 }
 
 // Create blocklists
@@ -86,13 +97,28 @@ phone.on('incomingCall', (number) => {
   console.log(`[i] Incoming call from ${number} . . .`);
   blocklist.isSpam(number, function(isSpam) {
     console.log(`[i] Spam analysis result for ${number}: ${isSpam}`);
+    log(number + '\t' + (isSpam ? 'SPAM' : 'HAM'));
     if (isSpam) phone.hangUp();
   });
 });
 
+// Detect disconnections
+let isShuttingDown = false;
+phone.on('disconnected', () => {
+  if (!isShuttingDown && phone.isDebug()) {
+    console.log('[i] Session expired. Trying to reconnect . . .');
+  }
+});
+
 // Connect to SIP server
+let isFirstConnection = true;
 phone.on('connected', () => {
-  console.log('[i] Phone connected! Press "q" whenever you want to quit.');
+  if (isFirstConnection) {
+    isFirstConnection = false;
+    console.log('[i] Phone connected! Press "q" whenever you want to quit.');
+  } else if (phone.isDebug()) {
+    console.log('[i] Session renewed');
+  }
 });
 console.log('[i] Now connecting . . .');
 phone.connect();
@@ -105,6 +131,7 @@ stdin.setEncoding('utf8');
 stdin.on('data', (key) => {
   if ((key === '\u0003') || (key === 'q') || (key === 'Q')) {
     console.log('[i] Now disconnecting . . .');
+    isShuttingDown = true;
     phone.disconnect();
     process.exit(0);
   }

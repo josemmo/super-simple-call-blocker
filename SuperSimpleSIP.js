@@ -4,19 +4,21 @@ function SuperSimpleSIP(CONFIG) {
   const ALLOW_METHODS = "PRACK, INVITE, ACK, BYE, CANCEL, UPDATE, INFO, " +
     "SUBSCRIBE, NOTIFY, REFER, MESSAGE, OPTIONS";
   const DEFAULTS = {
-    expiration: 300, // Duration of SIP session in seconds
-    pingInterval: 10, // Seconds between ping to server
+    expiration: 300, // Duration of SIP session in seconds. May be replaced by server.
+    expirationAdjust: -10, // Effective expiration timeout
+    maxForwards: 70, // Maximum jumps between routers (see SIP protocol)
     debug: false,
     userAgent: "SuperSimpleSIP/" + require('./package.json').version,
   };
 
-  let socket = null, aliveInterval = null, ts = this, lastSeqNum = 0;
-  let caller = null, phoneStatus = STATUS.REGISTERING, lastConnectTime = 0;
+  let socket = null, aliveTimeout = null, ts = this, lastSeqNum = 0;
+  let caller = null, phoneStatus = STATUS.REGISTERING;
   let listeners = {
     connected: function() {},
     disconnected: function() {},
     error: function() {},
-    incomingCall: function() {}
+    incomingCall: function() {},
+    callCanceled: function() {}
   };
 
   // Validate config
@@ -75,7 +77,7 @@ function SuperSimpleSIP(CONFIG) {
     let welcomeMsg = new Buffer(
       `REGISTER sip:${CONFIG.server}:${CONFIG.port} SIP/2.0\r\n` +
       `Via: SIP/2.0/UDP ${addr.address}:${addr.port};rport;branch=${getRandomBranch()}\r\n` +
-      'Max-Forwards: 70\r\n' +
+      `Max-Forwards: ${CONFIG.maxForwards}\r\n` +
       `From: "${CONFIG.user}" <sip:${CONFIG.user}@${CONFIG.realm}>;tag=${getRandomTag()}\r\n` +
       `To: "${CONFIG.user}" <sip:${CONFIG.user}@${CONFIG.realm}>\r\n` +
       `Call-ID: ${getRandomTag()}\r\n` +
@@ -91,26 +93,29 @@ function SuperSimpleSIP(CONFIG) {
 
 
   /**
+   * Attach alive timeout
+   */
+  function attachAliveTimeout() {
+    if (aliveTimeout !== null) clearTimeout(aliveTimeout);
+    aliveTimeout = setTimeout(function() {
+      restartConnection();
+    }, (CONFIG.expiration+CONFIG.expirationAdjust)*1000);
+  }
+
+
+  /**
    * Restart connection
    */
   function restartConnection() {
     // Set variables to default
+    if (phoneStatus != STATUS.REGISTERING) listeners.disconnected();
     caller = null;
     phoneStatus = STATUS.REGISTERING;
-    lastConnectTime = Date.now();
     lastSeqNum++;
 
-    // Attach new intervals
-    if (aliveInterval !== null) clearInterval(aliveInterval);
-    aliveInterval = setInterval(function() {
-      let timeDiff = (Date.now() - lastConnectTime) / 1000;
-      timeDiff += CONFIG.pingInterval + 2; // To be ran one interval before
-      if (timeDiff >= CONFIG.expiration) {
-        restartConnection();
-      } else {
-        socket.send(new Buffer('\r\n'), CONFIG.port, CONFIG.server);
-      }
-    }, CONFIG.pingInterval*1000);
+    // Attach alive timeout
+    attachAliveTimeout();
+
 
     // Wait for server to accept the connection
     let acceptInterval = setInterval(() => {
@@ -131,7 +136,7 @@ function SuperSimpleSIP(CONFIG) {
    */
   function ackInvite() {
     if (phoneStatus == STATUS.IDLE) {
-      log('New caller: ' + caller);
+      log('New caller: ' + JSON.stringify(caller));
       phoneStatus = STATUS.RINGING;
       let tryingMsg = new Buffer(
         'SIP/2.0 100 Trying\r\n' +
@@ -211,11 +216,40 @@ function SuperSimpleSIP(CONFIG) {
       } else if (headers.indexOf('200 OK') > -1) {
         phoneStatus = STATUS.IDLE;
         let expiresArray = headers.match(/;expires=([0-9]+)/g);
+        let lastExpiration = CONFIG.expiration;
         for (let i in expiresArray) {
           let timeout = Number(expiresArray[i].split('=')[1]);
           if (timeout < CONFIG.expiration) CONFIG.expiration = timeout;
         }
+        if (lastExpiration != CONFIG.expiration) {
+          log(`Changed session expiration from ${lastExpiration} to ` +
+            `${CONFIG.expiration} seconds`);
+        }
+        attachAliveTimeout();
         listeners.connected();
+      } else if (headers.indexOf('CANCEL') === 0) {
+        if (caller !== null) {
+          caller = null;
+          listeners.callCanceled();
+          log('Called canceled the call');
+        }
+        phoneStatus = STATUS.IDLE;
+        let okSeq = headers.split('CSeq: ')[1].split('\r\n')[0];
+        let okVia = headers.split('Via: ')[1].split('\r\n')[0];
+        let okFrom = headers.split('From: ')[1].split('\r\n')[0];
+        let okTo = headers.split('To: ')[1].split('\r\n')[0];
+        let okCallID = headers.split('Call-ID: ')[1].split('\r\n')[0];
+        let addr = socket.address();
+        let okMsg = new Buffer(
+          'SIP/2.0 200 OK\r\n' +
+          `Via: ${okVia}\r\n` +
+          `From: ${okFrom}\r\n` +
+          `To: ${okTo}\r\n` +
+          `Call-ID: ${okCallID}\r\n` +
+          `CSeq: ${okSeq}\r\n` +
+          'Content-Length: 0\r\n\r\n'
+        );
+        socket.send(okMsg, CONFIG.port, CONFIG.server);
       }
     });
 
@@ -259,9 +293,9 @@ function SuperSimpleSIP(CONFIG) {
    * Disconnect
    */
   this.disconnect = function() {
-    if (aliveInterval !== null) {
-      clearInterval(aliveInterval);
-      aliveInterval = null;
+    if (aliveTimeout !== null) {
+      clearTimeout(aliveTimeout);
+      aliveTimeout = null;
     }
     if (socket !== null) socket.close();
     caller = null;
@@ -280,6 +314,15 @@ function SuperSimpleSIP(CONFIG) {
     if (typeof callback !== 'function') throw new Error('Not a function');
     listeners[evnt] = callback;
   };
+
+
+  /**
+   * Is debug
+   * @return {boolean} Debug
+   */
+  this.isDebug = function() {
+    return CONFIG.debug;
+  }
 
 }
 

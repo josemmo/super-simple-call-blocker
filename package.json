@@ -1,6 +1,6 @@
 {
   "name": "super-simple-call-blocker",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "An easy-to-use call blocker for SIP phones",
   "author": "José M. Moreno <josemmo@protonmail.com>",
   "license": "MIT",
@@ -24,6 +24,6 @@
   },
   "homepage": "https://github.com/josemmo/super-simple-call-blocker",
   "devDependencies": {
-    "nexe": "^2.0.0-rc.22"
+    "nexe": "^2.0.0-rc.23"
   }
 }

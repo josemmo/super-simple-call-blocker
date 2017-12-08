@@ -5,8 +5,12 @@ function FileBlocklist(path) {
   function readFile(callback) {
     const fs = require('fs');
     fs.readFile(path, 'utf8', function (err, data) {
-      if (err) throw new Error('Failed to open blocklist file');
-      numbers = data.replace(/\r/g, '').replace(/#(.+)\n/g, '').trim().split('\n');
+      if (err) {
+        console.error('Failed to open blocklist file');
+        numbers = [];
+      } else {
+        numbers = data.replace(/\r/g, '').replace(/#(.+)\n/g, '').trim().split('\n');
+      }
       callback();
     });
   }

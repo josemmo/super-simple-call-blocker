@@ -27,9 +27,10 @@ The rest optional fields with their respective default values are the following:
 
 ```javascript
 {
-  "expiration": 300,  // Duration of SIP session in seconds
-  "pingInterval": 10, // Seconds between ping to server
-  "debug": false,     // Show or hide debug messages
+  "expiration": 300, // Duration of SIP session in seconds. May be replaced by server.
+  "expirationAdjust": -10, // Effective expiration timeout
+  "maxForwards": 70, // Maximum jumps between routers (see SIP protocol)
+  "debug": false, // Show or hide debug messages
   "userAgent": "SuperSimpleSIP/[version]"
 }
 ```
@@ -50,6 +51,9 @@ It is also possible to specify a local blocklist of numbers by creating a text f
 ```
 
 Note that the path to the blocklist needs to be set with `--blocklist path-to-the-blocklist.txt`.
+
+## How do I keep track of my calls?
+SSCB can keep a record of all incoming calls in plain text format. This option can be set by using `--log path-to-logfile.txt`.
 
 ## How do I compile it myself?
 1. Download the source code using `npm install https://github.com/josemmo/super-simple-call-blocker.git`
