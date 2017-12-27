@@ -1,6 +1,6 @@
 {
   "name": "super-simple-call-blocker",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "An easy-to-use call blocker for SIP phones",
   "author": "José M. Moreno <josemmo@protonmail.com>",
   "license": "MIT",

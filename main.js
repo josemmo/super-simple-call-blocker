@@ -125,14 +125,16 @@ phone.connect();
 
 // Listen to STDIN keypress
 const stdin = process.stdin;
-stdin.setRawMode(true);
-stdin.resume();
-stdin.setEncoding('utf8');
-stdin.on('data', (key) => {
-  if ((key === '\u0003') || (key === 'q') || (key === 'Q')) {
-    console.log('[i] Now disconnecting . . .');
-    isShuttingDown = true;
-    phone.disconnect();
-    process.exit(0);
-  }
-});
+if (typeof stdin.setRawMode == 'function') {
+  stdin.setRawMode(true);
+  stdin.resume();
+  stdin.setEncoding('utf8');
+  stdin.on('data', (key) => {
+    if ((key === '\u0003') || (key === 'q') || (key === 'Q')) {
+      console.log('[i] Now disconnecting . . .');
+      isShuttingDown = true;
+      phone.disconnect();
+      process.exit(0);
+    }
+  });
+}
