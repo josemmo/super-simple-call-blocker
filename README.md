@@ -11,7 +11,7 @@ It works by connecting to your ISP servers using the [SIP protocol](https://en.w
 3. Run `sscb --config path-to-your-config-file.json` from a terminal
 
 ## How do I make it work?
-A valid configuration file written in JSON is needed for the executable to be ran. Here is a basic example with all required fields needed to connect to a SIP server:
+A valid configuration file written in JSON is needed for the executable to be run. Here is a basic example with all required fields needed to connect to a SIP server:
 
 ```javascript
 {
