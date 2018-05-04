@@ -6,11 +6,11 @@ if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
 // Define binaries to build
 const version = require('./package.json').version;
 const BINARIES = [
-  {target: 'windows-x64-9.2.0', filename: `sscb-windows-x64-${version}.exe`},
-  {target: 'windows-x86-9.2.0', filename: `sscb-windows-x86-${version}.exe`},
-  {target: 'mac-x64-9.2.0', filename: `sscb-macos-x64-${version}`},
-  {target: 'linux-x64-9.2.0', filename: `sscb-linux-x64-${version}`},
-  {target: 'alpine-x86-9.2.0', filename: `sscb-alpine-x86-${version}`}
+  {target: 'windows-x64-9.11.1', filename: `sscb-windows-x64-${version}.exe`},
+  {target: 'windows-x86-9.11.1', filename: `sscb-windows-x86-${version}.exe`},
+  {target: 'mac-x64-10.0.0', filename: `sscb-macos-x64-${version}`},
+  {target: 'linux-x64-9.5.0', filename: `sscb-linux-x64-${version}`},
+  {target: 'alpine-x86-9.5.0', filename: `sscb-alpine-x86-${version}`}
 ];
 
 // Prepare to build
@@ -35,8 +35,10 @@ function build(i) {
         console.log('[i] Output directory: ' + OUTPUT_DIR);
       }
     });
+  }).catch(() => {
+    console.error(`[!] Failed to compile ${BINARIES[i].target}`);
   });
-};
+}
 
 // Start building
 console.log('[i] Generating binaries . . .');
